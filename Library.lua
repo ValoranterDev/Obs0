@@ -1298,6 +1298,8 @@ local ScreenGui = New("ScreenGui", {
     Name = "Obsidian",
     DisplayOrder = 998,
     ResetOnSpawn = false,
+    IgnoreGuiInset = true, -- Forces it to cover the top bar
+    ScreenInsets = Enum.ScreenInsets.None, -- Forces it to cover mobile phone notches
 })
 ParentUI(ScreenGui)
 Library.ScreenGui = ScreenGui
@@ -1319,12 +1321,12 @@ local ModalElement = New("TextButton", {
 --// Custom Snow Overlay \\--
 local SnowOverlay = New("Frame", {
     BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-    BackgroundTransparency = 1, -- Starts invisible
+    BackgroundTransparency = 1, 
     BorderSizePixel = 0,
-    Size = UDim2.new(1, 0, 1, 100), -- Made slightly larger to cover the topbar
-    Position = UDim2.new(0, 0, 0, -50),
+    Size = UDim2.new(1, 0, 1, 0), -- Set to exactly 1,0,1,0
+    Position = UDim2.new(0, 0, 0, 0), -- Set to exactly 0,0,0,0
     Visible = false,
-    ZIndex = -998, -- Sits right behind the UI
+    ZIndex = -998, 
     Parent = ScreenGui,
 })
 Library.SnowOverlay = SnowOverlay
@@ -11491,8 +11493,9 @@ function Library:CreateLoading(LoadingInfo)
             AnchorPoint = Vector2.new(0.5, 0.5),
             BackgroundTransparency = 1,
             Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.fromOffset(36, 36), -- You can change this to make the logo bigger/smaller
-            Image = "rbxassetid://133671154311695",
+            Size = UDim2.fromOffset(36, 36),
+            Image = "rbxthumb://type=Asset&id=133671154311695&w=150&h=150", -- Automatically fetches the correct image ID
+            ZIndex = 10, -- Ensures it renders above everything else in the topbar
             Parent = TopBar,
         })
         -- =============================
