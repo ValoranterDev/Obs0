@@ -28,7 +28,7 @@ local Toggles = {}
 local Options = {}
 local Tooltips = {}
 
-local BaseURL = "https://raw.githubusercontent.com/ValoranterDev/Obs0/refs/heads/main/Library.lua"
+local BaseURL = "https://raw.githubusercontent.com/ValoranterDev/Obs0/refs/heads/main/Library.lua" 
 local CustomImageManager = {}
 local CustomImageManagerAssets = {
     TransparencyTexture = {
@@ -1315,6 +1315,49 @@ local ModalElement = New("TextButton", {
     ZIndex = -999,
     Parent = ScreenGui,
 })
+
+--// Custom Snow Overlay \\--
+local SnowOverlay = New("Frame", {
+    BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+    BackgroundTransparency = 1, -- Starts invisible
+    BorderSizePixel = 0,
+    Size = UDim2.new(1, 0, 1, 100), -- Made slightly larger to cover the topbar
+    Position = UDim2.new(0, 0, 0, -50),
+    Visible = false,
+    ZIndex = -998, -- Sits right behind the UI
+    Parent = ScreenGui,
+})
+Library.SnowOverlay = SnowOverlay
+Library.SnowLoop = nil
+
+local function SpawnSnowflake()
+    local snowflake = Instance.new("Frame")
+    snowflake.Size = UDim2.new(0, 4, 0, 4)
+    snowflake.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    snowflake.BackgroundTransparency = 0.4
+    snowflake.BorderSizePixel = 0
+    
+    local randomX = math.random() 
+    snowflake.Position = UDim2.new(randomX, 0, -0.05, 0)
+    snowflake.Parent = SnowOverlay
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 50) 
+    corner.Parent = snowflake
+    
+    local fallTime = math.random(6, 12)
+    local tweenInfo = TweenInfo.new(fallTime, Enum.EasingStyle.Linear)
+    
+    local tween = TweenService:Create(snowflake, tweenInfo, {
+        Position = UDim2.new(randomX, 0, 1.05, 0)
+    })
+    
+    tween:Play()
+    
+    tween.Completed:Connect(function()
+        snowflake:Destroy()
+    end)
+end
 
 --// Cursor
 local Cursor, CursorCustomImage
@@ -8592,8 +8635,9 @@ function Library:CreateWindow(WindowInfo)
         RightWrapper = New("Frame", {
             AnchorPoint = Vector2.new(1, 0.5),
             BackgroundTransparency = 1,
-            Position = UDim2.new(1, -49, 0.5, 0),
-            Size = UDim2.new(1, -InitialLeftWidth - 57 - 1, 1, -16),
+            -- Moved further left (-214) to make room for our custom search bar
+            Position = UDim2.new(1, -214, 0.5, 0),
+            Size = UDim2.new(1, -InitialLeftWidth - 222, 1, -16),
             Parent = TopBar,
         })
 
@@ -8654,14 +8698,54 @@ function Library:CreateWindow(WindowInfo)
             Parent = CurrentTabInfo,
         })
 
+        
+       
+       -- ==== CUSTOM SEARCH BAR ====
         SearchBox = New("TextBox", {
             BackgroundColor3 = "MainColor",
             PlaceholderText = "Search",
-            Size = WindowInfo.SearchbarSize,
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -46, 0.5, 0), -- Placed exactly 8 pixels to the left of the Move Icon
+            Size = UDim2.new(0, 160, 0, 30), -- Smaller, fixed size
             TextScaled = true,
             Visible = not (WindowInfo.DisableSearch or false),
-            Parent = RightWrapper,
+            Parent = TopBar, -- Parented directly to the TopBar now!
         })
+        
+        table.insert(
+            Library.Corners,
+            New("UICorner", {
+                CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+                Parent = SearchBox,
+            })
+        )
+        New("UIPadding", {
+            PaddingBottom = UDim.new(0, 8),
+            PaddingLeft = UDim.new(0, 8),
+            PaddingRight = UDim.new(0, 8),
+            PaddingTop = UDim.new(0, 8),
+            Parent = SearchBox,
+        })
+        New("UIStroke", {
+            Color = "OutlineColor",
+            Parent = SearchBox,
+        })
+
+        local SearchIcon = Library:GetIcon("search")
+        if SearchIcon then
+            New("ImageLabel", {
+                Image = SearchIcon.Url,
+                ImageColor3 = "FontColor",
+                ImageRectOffset = SearchIcon.ImageRectOffset,
+                ImageRectSize = SearchIcon.ImageRectSize,
+                ImageTransparency = 0.5,
+                Size = UDim2.fromScale(1, 1),
+                SizeConstraint = Enum.SizeConstraint.RelativeYY,
+                Parent = SearchBox,
+            })
+        end
+        -- ===========================
+       
         New("UIFlexItem", {
             FlexMode = Enum.UIFlexMode.Shrink,
             Parent = SearchBox,
@@ -9038,18 +9122,11 @@ function Library:CreateWindow(WindowInfo)
     function Window:ShowTabInfo(Name, Description)
         CurrentTabLabel.Text = Name
         CurrentTabDescription.Text = Description
-
-        if IsDefaultSearchbarSize then
-            SearchBox.Size = UDim2.fromScale(0.5, 1)
-        end
         CurrentTabInfo.Visible = true
     end
 
     function Window:HideTabInfo()
         CurrentTabInfo.Visible = false
-        if IsDefaultSearchbarSize then
-            SearchBox.Size = UDim2.fromScale(1, 1)
-        end
     end
 
     function Window:AddTab(...)
@@ -11035,6 +11112,40 @@ function Library:CreateWindow(WindowInfo)
         else
             Library.Toggled = not Library.Toggled
         end
+       
+       -- ==== CUSTOM SNOW OVERLAY LOGIC ====
+        if Library.Toggled then
+            SnowOverlay.Visible = true
+            TweenService:Create(SnowOverlay, Library.WindowAnimationInfo, { BackgroundTransparency = 0.5 }):Play()
+            
+            -- Start Snow Loop
+            if not Library.SnowLoop then
+                Library.SnowLoop = task.spawn(function()
+                    while Library.Toggled and SnowOverlay.Parent do
+                        SpawnSnowflake()
+                        task.wait(0.05)
+                    end
+                end)
+            end
+        else
+            TweenService:Create(SnowOverlay, Library.WindowAnimationInfo, { BackgroundTransparency = 1 }):Play()
+            
+            -- Stop loop and clean up existing snowflakes after fade out
+            if Library.SnowLoop then
+                task.cancel(Library.SnowLoop)
+                Library.SnowLoop = nil
+            end
+            
+            task.delay(Library.WindowAnimationInfo.Time, function()
+                if not Library.Toggled then
+                    SnowOverlay.Visible = false
+                    for _, child in ipairs(SnowOverlay:GetChildren()) do
+                        if child:IsA("Frame") then child:Destroy() end
+                    end
+                end
+            end)
+        end
+        -- ==== END CUSTOM SNOW OVERLAY LOGIC ====
 
         if Library.Animations and Library.Animations.ToggleWindow == true then
             local FadeTime = Library.WindowAnimationInfo.Time
@@ -11374,6 +11485,17 @@ function Library:CreateLoading(LoadingInfo)
         Parent = Container,
     })
     Library:MakeDraggable(MainFrame, TopBar, true, true)
+
+    -- ==== CUSTOM TOP BAR LOGO ====
+        New("ImageLabel", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundTransparency = 1,
+            Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromOffset(36, 36), -- You can change this to make the logo bigger/smaller
+            Image = "rbxassetid://133671154311695",
+            Parent = TopBar,
+        })
+        -- =============================
 
     local TitleHolder = New("Frame", {
         BackgroundTransparency = 1,
